@@ -13,9 +13,49 @@ impl Matrix {
         Self { root: node }
     }
 
+    pub fn print(&self) {
+        let mut col_curs = self.cursor();
+        print!("<-[ ]-");
+        col_curs.move_right();
+        while let Some(x) = col_curs.get_col() {
+            print!("[{x}]-");
+            col_curs.move_right();
+        }
+        println!(">");
+        let mut row_curs = self.cursor();
+        row_curs.move_down();
+        while let Some(y) = row_curs.get_row() {
+            print!("   |  ");
+            col_curs.move_right();
+            while let Some(_) = col_curs.get_col() {
+                print!(" |  ");
+                col_curs.move_right();
+            }
+            println!();
+            print!("<-[{y}]-");
+            row_curs.move_right();
+            col_curs.move_right();
+            while let Some(x) = row_curs.get_col() {
+                while col_curs.get_col().expect("Every node to have a column") != x {
+                    print!("-+--");
+                    col_curs.move_right();
+                }
+                print!("({x})-");
+                row_curs.move_right();
+                col_curs.move_right();
+            }
+            while let Some(_) = col_curs.get_col() {
+                print!("-+--");
+                col_curs.move_right();
+            }
+            println!(">");
+            row_curs.move_down();
+        }
+    }
+
     pub fn cursor(&self) -> Cursor {
         Cursor {
-            _matrix: self,
+            matrix: self,
             cursor: node::NodeCursor(self.root),
         }
     }
@@ -38,13 +78,38 @@ impl Matrix {
         true
     }
     pub fn insert_row(&mut self, row: usize) -> bool {
-        todo!()
+        let mut cursor = self.cursor();
+        if cursor.search_row(row) {
+            return false;
+        }
+        let node = node::Node::new(0, row);
+        unsafe {
+            node::Node::loop_row(node, cursor.cursor.0);
+        }
+        true
+    }
+    pub fn insert(&mut self, col: usize, row: usize) -> bool {
+        self.insert_col(col);
+        self.insert_row(row);
+        let mut col_cursor = self.cursor();
+        col_cursor.search_col(col);
+        if col_cursor.search_row(row) {
+            return false;
+        }
+        let mut row_cursor = self.cursor();
+        row_cursor.search_row(row);
+        row_cursor.search_col(col);
+        let node = node::Node::new(col, row);
+        unsafe {
+            node::Node::loop_entry(node, row_cursor.cursor.0, col_cursor.cursor.0);
+        }
+        true
     }
 }
 
 pub struct Cursor<'a> {
-    _matrix: &'a Matrix,
-    cursor: node::NodeCursor,
+    matrix: &'a Matrix,
+    pub cursor: node::NodeCursor,
 }
 
 impl<'a> Cursor<'a> {
@@ -71,14 +136,14 @@ impl<'a> Cursor<'a> {
         unsafe { self.cursor.search_col(col) }
     }
     pub fn search_row(&mut self, row: usize) -> bool {
-        todo!()
+        unsafe { self.cursor.search_row(row) }
     }
 
     pub fn on_col(&self) -> bool {
-        todo!()
+        unsafe { self.cursor.on_col() }
     }
     pub fn on_row(&self) -> bool {
-        todo!()
+        unsafe { self.cursor.on_row() }
     }
     pub fn get_col(&self) -> Option<usize> {
         unsafe {
@@ -97,6 +162,10 @@ impl<'a> Cursor<'a> {
                 Some(self.cursor.get_y())
             }
         }
+    }
+
+    pub fn matrix(&self) -> &Matrix {
+        self.matrix
     }
 }
 
@@ -158,6 +227,10 @@ impl<'a> CursorCut<'a> {
             cut: &mut self.cursor,
         })
     }
+
+    pub fn matrix(&self) -> &Matrix {
+        self.matrix
+    }
 }
 
 pub struct ColCut<'a> {
@@ -171,6 +244,9 @@ impl<'a> ColCut<'a> {
     }
     pub fn cursor_cut(&mut self) -> CursorCut {
         self.matrix.cusor_cut()
+    }
+    pub fn matrix(&self) -> &Matrix {
+        self.matrix
     }
 }
 
@@ -191,6 +267,9 @@ impl<'a> RowCut<'a> {
     }
     pub fn cursor_cut(&mut self) -> CursorCut {
         self.matrix.cusor_cut()
+    }
+    pub fn matrix(&self) -> &Matrix {
+        self.matrix
     }
 }
 

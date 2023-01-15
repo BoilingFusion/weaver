@@ -52,6 +52,21 @@ impl Node {
         Self::link_horizontal(node, right);
         Self::link_vertical(node, node);
     }
+    pub unsafe fn loop_row(node: *mut Node, down: *mut Node) {
+        (*node).col = (*down).col;
+        (*node).row = node;
+        Self::link_vertical((*down).up, node);
+        Self::link_vertical(node, down);
+        Self::link_horizontal(node, node);
+    }
+    pub unsafe fn loop_entry(node: *mut Node, right: *mut Node, down: *mut Node) {
+        (*node).col = (*down).col;
+        (*node).row = (*right).col;
+        Self::link_horizontal((*right).left, node);
+        Self::link_horizontal(node, right);
+        Self::link_vertical((*down).up, node);
+        Self::link_vertical(node, down);
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -88,6 +103,7 @@ impl NodeCursor {
             if col < x {
                 return false;
             }
+            self.move_right();
         }
         false
     }
@@ -102,6 +118,7 @@ impl NodeCursor {
             if row < y {
                 return false;
             }
+            self.move_down();
         }
         false
     }
